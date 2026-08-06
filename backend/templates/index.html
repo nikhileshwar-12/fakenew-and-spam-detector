@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TruthGuard — AI Fake News & Spam Detector</title>
+<style>
+  :root{
+    --bg:#0b1020; --panel:#141b34; --panel2:#1b2340; --line:#2a3457;
+    --text:#e8edff; --muted:#9aa6d0; --accent:#6c8cff; --accent2:#8b5cf6;
+    --danger:#ff5d6c; --ok:#2fd07f; --warn:#ffb020;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    background:radial-gradient(1200px 700px at 80% -10%,#1c2547 0%,var(--bg) 55%);
+    color:var(--text); min-height:100vh;
+  }
+  .wrap{max-width:960px;margin:0 auto;padding:28px 20px 64px}
+  header{display:flex;align-items:center;gap:14px;margin-bottom:6px}
+  .logo{
+    width:46px;height:46px;border-radius:12px;flex:none;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    display:grid;place-items:center;box-shadow:0 8px 24px rgba(108,140,255,.35)
+  }
+  h1{font-size:1.5rem;margin:0;letter-spacing:.3px}
+  .tag{color:var(--muted);font-size:.9rem;margin:2px 0 0}
+  .card{
+    background:linear-gradient(180deg,var(--panel),var(--panel2));
+    border:1px solid var(--line);border-radius:16px;padding:20px;margin-top:20px;
+    box-shadow:0 12px 40px rgba(0,0,0,.35)
+  }
+  label.small{font-size:.82rem;color:var(--muted);display:block;margin-bottom:8px}
+  textarea{
+    width:100%;min-height:150px;resize:vertical;border-radius:12px;padding:14px;
+    background:#0d1430;border:1px solid var(--line);color:var(--text);
+    font-size:1rem;line-height:1.5;outline:none
+  }
+  textarea:focus,input[type=text]:focus,input[type=url]:focus{border-color:var(--accent)}
+  input[type=text],input[type=url]{
+    width:100%;border-radius:12px;padding:13px 14px;background:#0d1430;
+    border:1px solid var(--line);color:var(--text);font-size:1rem;outline:none
+  }
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+  .tabs button{
+    background:#0d1430;border:1px solid var(--line);color:var(--muted);
+    padding:9px 16px;border-radius:10px;cursor:pointer;font-size:.9rem;font-weight:600
+  }
+  .tabs button.active{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border-color:transparent}
+  .pane{display:none}
+  .pane.active{display:block}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:14px}
+  .modes{display:flex;gap:8px;background:#0d1430;padding:5px;border-radius:12px;border:1px solid var(--line)}
+  .modes button{background:transparent;border:0;color:var(--muted);padding:8px 14px;border-radius:9px;cursor:pointer;font-size:.88rem;font-weight:600}
+  .modes button.active{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+  .btn{
+    margin-left:auto;background:linear-gradient(135deg,var(--accent),var(--accent2));
+    color:#fff;border:0;padding:12px 22px;border-radius:12px;font-size:1rem;font-weight:700;
+    cursor:pointer;box-shadow:0 8px 22px rgba(108,140,255,.4)
+  }
+  .btn:disabled{opacity:.55;cursor:progress}
+  .samples{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .chip{background:#0d1430;border:1px solid var(--line);color:var(--muted);padding:7px 12px;border-radius:999px;font-size:.8rem;cursor:pointer}
+  .chip:hover{border-color:var(--accent);color:var(--text)}
+  .drop{
+    border:2px dashed var(--line);border-radius:14px;padding:28px;text-align:center;
+    background:#0d1430;cursor:pointer;transition:.15s
+  }
+  .drop:hover,.drop.drag{border-color:var(--accent);background:#101a3c}
+  .drop b{color:var(--text)} .drop small{color:var(--muted);display:block;margin-top:6px}
+  .fname{margin-top:10px;color:var(--accent);font-size:.88rem;font-weight:600}
+  .hint{color:var(--muted);font-size:.8rem;margin-top:10px;line-height:1.5}
+  #results{margin-top:20px;display:none}
+  .srcline{color:var(--muted);font-size:.82rem;margin-bottom:10px}
+  .verdicts{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:640px){.verdicts{grid-template-columns:1fr}}
+  .verdict{border:1px solid var(--line);border-radius:14px;padding:18px;background:#0d1430}
+  .verdict h3{margin:0 0 4px;font-size:.8rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+  .badge{display:inline-block;padding:7px 14px;border-radius:10px;font-weight:800;font-size:1.05rem;margin:6px 0}
+  .badge.bad{background:rgba(255,93,108,.15);color:var(--danger);border:1px solid rgba(255,93,108,.4)}
+  .badge.good{background:rgba(47,208,127,.15);color:var(--ok);border:1px solid rgba(47,208,127,.4)}
+  .meter{height:10px;border-radius:999px;background:#1b2340;overflow:hidden;margin:10px 0 6px}
+  .meter>span{display:block;height:100%;border-radius:999px}
+  .conf{font-size:.82rem;color:var(--muted)}
+  .kw{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+  .kw span{background:#1b2340;border:1px solid var(--line);padding:4px 9px;border-radius:8px;font-size:.75rem;color:var(--muted)}
+  .signals{margin-top:16px;border:1px solid var(--line);border-radius:14px;padding:16px;background:#0d1430}
+  .sgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:10px}
+  @media(max-width:640px){.sgrid{grid-template-columns:repeat(2,1fr)}}
+  .sig{background:#141b34;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  .sig b{display:block;font-size:1.2rem} .sig small{color:var(--muted);font-size:.72rem}
+  .ok-box{margin-top:16px;border:1px solid rgba(47,208,127,.4);background:rgba(47,208,127,.1);border-radius:14px;padding:18px;display:none}
+  .ok-box a{color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));padding:10px 18px;border-radius:10px;text-decoration:none;font-weight:700;display:inline-block;margin-top:8px}
+  footer{margin-top:26px;color:var(--muted);font-size:.8rem;text-align:center;line-height:1.6}
+  .stats{display:flex;gap:18px;flex-wrap:wrap;margin-top:8px;color:var(--muted);font-size:.8rem}
+  .stats b{color:var(--text)}
+  .err{color:var(--danger);margin-top:12px;font-size:.9rem;display:none}
+  .spin{width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;display:inline-block;vertical-align:-3px;animation:sp .7s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2 4 5v6c0 5 3.4 8.6 8 11 4.6-2.4 8-6 8-11V5l-8-3z"/>
+        <path d="M9 12l2 2 4-4"/>
+      </svg>
+    </div>
+    <div>
+      <h1>TruthGuard</h1>
+      <p class="tag">AI-powered Fake News &amp; Spam detector · TF-IDF + Logistic Regression</p>
+    </div>
+  </header>
+
+  <div class="stats">
+    {% if metrics.get('fake_news') %}
+    <span>📰 Fake-news model accuracy: <b>{{ (metrics.fake_news.accuracy*100)|round(1) }}%</b></span>
+    {% endif %}
+    {% if metrics.get('spam') %}
+    <span>✉️ Spam model accuracy: <b>{{ (metrics.spam.accuracy*100)|round(1) }}%</b></span>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="tabs" id="tabs">
+      <button data-t="text" class="active">✍️ Text</button>
+      <button data-t="file">📄 Upload .txt</button>
+      <button data-t="csv">📊 Batch CSV</button>
+      <button data-t="url">🔗 URL</button>
+      <button data-t="image">📷 Image</button>
+    </div>
+
+    <div class="row" style="margin-top:0">
+      <div class="modes" id="modes">
+        <button data-m="auto" class="active">Auto (both)</button>
+        <button data-m="fake_news">Fake news</button>
+        <button data-m="spam">Spam</button>
+      </div>
+    </div>
+
+    <div class="pane active" id="pane-text">
+      <div class="row" style="margin-top:16px"></div>
+      <label class="small" for="text">Paste a news headline/article or a message/email</label>
+      <textarea id="text" placeholder="e.g. CONGRATULATIONS! You won a $1000 gift card, click http://bit.ly/x to claim now!"></textarea>
+      <div class="samples">
+        <span class="chip" data-s="BREAKING: Scientists confirm miracle fruit cures all diseases overnight, doctors are hiding the truth!">📰 Fake news</span>
+        <span class="chip" data-s="The central bank raised interest rates by 0.25 percent on Tuesday, citing persistent inflation.">📰 Real news</span>
+        <span class="chip" data-s="URGENT: Your account is suspended. Verify your password and CVV at http://secure-login.co now to avoid closure!">✉️ Spam</span>
+        <span class="chip" data-s="Hey, are we still meeting for lunch tomorrow at 1pm? Let me know.">✉️ Ham</span>
+      </div>
+      <div class="row"><button class="btn" data-go="text">Analyze</button></div>
+    </div>
+
+    <div class="pane" id="pane-file">
+      <div class="drop" id="drop-file">
+        <b>Click to choose a .txt file</b>
+        <small>or drag &amp; drop it here — we'll read the text and analyze it</small>
+        <div class="fname" id="fname-file"></div>
+      </div>
+      <input type="file" id="input-file" accept=".txt,text/plain" hidden>
+      <div class="row"><button class="btn" data-go="file">Analyze file</button></div>
+    </div>
+
+    <div class="pane" id="pane-csv">
+      <div class="drop" id="drop-csv">
+        <b>Click to choose a .csv file</b>
+        <small>one message per row — we'll classify every row and give you a downloadable results file</small>
+        <div class="fname" id="fname-csv"></div>
+      </div>
+      <input type="file" id="input-csv" accept=".csv,text/csv" hidden>
+      <div class="hint">Tip: if your CSV has a column named <b>text</b>, <b>message</b> or <b>v2</b>, that column is used automatically. Otherwise the longest column is used.</div>
+      <div class="row"><button class="btn" data-go="csv">Check all rows</button></div>
+      <div class="ok-box" id="csv-done"></div>
+    </div>
+
+    <div class="pane" id="pane-url">
+      <label class="small" for="url">Paste a news article link</label>
+      <input type="url" id="url" placeholder="https://www.example.com/some-news-article">
+      <div class="hint">We fetch the page, pull out the article text, and run it through the fake-news model. (Needs an internet connection; some sites block automated reading.)</div>
+      <div class="row"><button class="btn" data-go="url">Fetch &amp; analyze</button></div>
+    </div>
+
+    <div class="pane" id="pane-image">
+      <div class="drop" id="drop-image">
+        <b>Click to choose an image / screenshot</b>
+        <small>or drag &amp; drop — we read the text (OCR) and estimate if it's AI-generated</small>
+        <div class="fname" id="fname-image"></div>
+      </div>
+      <input type="file" id="input-image" accept="image/*" hidden>
+      <img id="img-preview" style="display:none;max-width:100%;max-height:260px;margin-top:12px;border-radius:12px;border:1px solid var(--line)">
+      <label class="checkline" style="display:flex;align-items:center;gap:8px;margin-top:12px;color:var(--muted);font-size:.85rem;cursor:pointer">
+        <input type="checkbox" id="chk-ai" checked> Also estimate if the image is AI-generated (experimental)
+      </label>
+      <div class="hint">📖 Reads text from screenshots of messages/articles, then checks it for fake news &amp; spam.<br>
+      🤖 <b>AI-image detection is experimental</b> — no detector is fully reliable, so treat the score as a hint, not proof.<br>
+      ⏳ The very first image may take a while (models download once).</div>
+      <div class="row"><button class="btn" data-go="image">Analyze image</button></div>
+    </div>
+
+    <div class="err" id="err"></div>
+  </div>
+
+  <div id="results">
+    <div class="srcline" id="srcline"></div>
+    <div id="ai-image-box"></div>
+    <div id="ocr-box"></div>
+    <div class="verdicts" id="verdicts"></div>
+    <div class="signals">
+      <label class="small">Signal analysis (heuristic red-flags)</label>
+      <div class="sgrid" id="signals"></div>
+    </div>
+  </div>
+
+  <footer>
+    Built with scikit-learn · Five ways in: text, .txt, batch CSV, URL, or image.<br>
+    Educational tool — predictions are probabilistic and should not be the sole basis for real decisions.
+  </footer>
+</div>
+
+<script>
+  let mode = "auto";
+  let activeTab = "text";
+  let fileTxt = null, fileCsv = null, fileImg = null;
+  const $ = s => document.querySelector(s);
+
+  document.querySelectorAll("#tabs button").forEach(b=>{
+    b.onclick=()=>{
+      document.querySelectorAll("#tabs button").forEach(x=>x.classList.remove("active"));
+      b.classList.add("active"); activeTab=b.dataset.t;
+      document.querySelectorAll(".pane").forEach(p=>p.classList.remove("active"));
+      $("#pane-"+activeTab).classList.add("active");
+      $("#err").style.display="none";
+    };
+  });
+  document.querySelectorAll("#modes button").forEach(b=>{
+    b.onclick=()=>{document.querySelectorAll("#modes button").forEach(x=>x.classList.remove("active"));b.classList.add("active");mode=b.dataset.m;};
+  });
+  document.querySelectorAll(".chip").forEach(c=>{ c.onclick=()=>{ $("#text").value=c.dataset.s; }; });
+
+  function wireDrop(dropId, inputId, fnameId, setter){
+    const drop=$("#"+dropId), input=$("#"+inputId), fname=$("#"+fnameId);
+    drop.onclick=()=>input.click();
+    input.onchange=()=>{ if(input.files[0]){ setter(input.files[0]); fname.textContent="Selected: "+input.files[0].name; } };
+    ["dragover","dragenter"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("drag");}));
+    ["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("drag");}));
+    drop.addEventListener("drop",e=>{ const f=e.dataTransfer.files[0]; if(f){ setter(f); fname.textContent="Selected: "+f.name; } });
+  }
+  wireDrop("drop-file","input-file","fname-file",f=>fileTxt=f);
+  wireDrop("drop-csv","input-csv","fname-csv",f=>fileCsv=f);
+  wireDrop("drop-image","input-image","fname-image",f=>{
+    fileImg=f;
+    const prev=$("#img-preview");
+    prev.src=URL.createObjectURL(f); prev.style.display="block";
+  });
+
+  document.querySelectorAll("[data-go]").forEach(b=>{
+    b.onclick=()=>{
+      const kind=b.dataset.go;
+      if(kind==="text") go(b, analyzeText);
+      if(kind==="file") go(b, analyzeFile);
+      if(kind==="csv")  go(b, analyzeCsv);
+      if(kind==="url")  go(b, analyzeUrl);
+      if(kind==="image")go(b, analyzeImage);
+    };
+  });
+  $("#text").addEventListener("keydown",e=>{ if((e.ctrlKey||e.metaKey)&&e.key==="Enter") $("[data-go=text]").click(); });
+
+  async function go(btn, fn){
+    const err=$("#err"); err.style.display="none";
+    const label=btn.textContent;
+    btn.disabled=true; btn.innerHTML='<span class="spin"></span> Working';
+    try{ await fn(); }
+    catch(e){ err.textContent=e.message; err.style.display="block"; }
+    finally{ btn.disabled=false; btn.textContent=label; }
+  }
+
+  async function postJSON(url, body){
+    const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    const d=await r.json(); if(!r.ok) throw new Error(d.error||"Request failed"); return d;
+  }
+
+  async function analyzeText(){
+    const text=$("#text").value.trim();
+    if(!text) throw new Error("Please enter some text.");
+    render(await postJSON("/api/analyze",{text,mode}));
+  }
+  async function analyzeFile(){
+    if(!fileTxt) throw new Error("Please choose a .txt file first.");
+    const fd=new FormData(); fd.append("file",fileTxt); fd.append("mode",mode);
+    const r=await fetch("/api/analyze-file",{method:"POST",body:fd});
+    const d=await r.json(); if(!r.ok) throw new Error(d.error||"Failed"); render(d);
+  }
+  async function analyzeUrl(){
+    const url=$("#url").value.trim();
+    if(!url) throw new Error("Please enter a URL.");
+    render(await postJSON("/api/analyze-url",{url,mode}));
+  }
+  async function analyzeCsv(){
+    $("#csv-done").style.display="none";
+    if(!fileCsv) throw new Error("Please choose a .csv file first.");
+    const fd=new FormData(); fd.append("file",fileCsv); fd.append("mode",mode);
+    const r=await fetch("/api/analyze-csv",{method:"POST",body:fd});
+    if(!r.ok){ const d=await r.json().catch(()=>({})); throw new Error(d.error||"Failed"); }
+    const rows=r.headers.get("X-Rows-Processed")||"?";
+    const blob=await r.blob();
+    const link=URL.createObjectURL(blob);
+    const box=$("#csv-done");
+    box.innerHTML=`✅ Analyzed <b>${rows}</b> rows. <br><a href="${link}" download="truthguard_results.csv">⬇ Download results CSV</a>`;
+    box.style.display="block";
+    $("#results").style.display="none";
+  }
+  async function analyzeImage(){
+    if(!fileImg) throw new Error("Please choose an image first.");
+    const fd=new FormData();
+    fd.append("file",fileImg); fd.append("mode",mode);
+    fd.append("check_ai", $("#chk-ai").checked ? "true":"false");
+    const r=await fetch("/api/analyze-image",{method:"POST",body:fd});
+    const d=await r.json(); if(!r.ok) throw new Error(d.error||"Failed");
+    render(d);
+  }
+
+  function bar(p){ const col=p>=50?"linear-gradient(90deg,#ff8a5d,#ff5d6c)":"linear-gradient(90deg,#2fd07f,#37c8ff)"; return `<div class="meter"><span style="width:${p}%;background:${col}"></span></div>`; }
+  function esc(s){return (s+"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+  function verdictCard(title,label,isBad,conf,prob,probLabel,keywords){
+    const kw=(keywords&&keywords.length)?`<div class="kw">${keywords.map(k=>`<span>${esc(k)}</span>`).join("")}</div>`:"";
+    return `<div class="verdict"><h3>${title}</h3><div class="badge ${isBad?'bad':'good'}">${label}</div>${bar(prob)}<div class="conf">${probLabel}: <b>${prob}%</b> · confidence ${conf}%</div>${kw}</div>`;
+  }
+
+  function render(d){
+    $("#csv-done").style.display="none";
+    const src=$("#srcline");
+    let s = d.source ? esc(d.source) : "";
+    if(d.extracted_title) s += (s?" · ":"")+"Title: "+esc(d.extracted_title);
+    if(d.extracted_chars) s += ` · ${d.extracted_chars} chars analyzed`;
+    src.textContent = s; src.style.display = s? "block":"none";
+
+    const aiBox=$("#ai-image-box"); aiBox.innerHTML="";
+    if(d.ai_image){
+      const a=d.ai_image;
+      if(a.ok){
+        const p=a.ai_probability;
+        const bad = p>=65;
+        const cls = bad?"bad":(p<=35?"good":"");
+        aiBox.innerHTML=`<div class="verdict" style="margin-bottom:16px">
+          <h3>🤖 AI-generated image check <span style="color:var(--warn)">· experimental</span></h3>
+          <div class="badge ${cls}">${esc(a.label)}</div>
+          ${bar(p)}
+          <div class="conf">Estimated AI-generated probability: <b>${p}%</b></div>
+          <div class="hint">⚠️ No AI-image detector is fully reliable — treat this as a hint, not proof.</div>
+        </div>`;
+      } else {
+        aiBox.innerHTML=`<div class="verdict" style="margin-bottom:16px">
+          <h3>🤖 AI-generated image check</h3>
+          <div class="hint" style="color:var(--warn)">${esc(a.error)}</div></div>`;
+      }
+    }
+
+    const ocrBox=$("#ocr-box"); ocrBox.innerHTML="";
+    if(d.ocr){
+      if(d.ocr.ok && d.ocr.text && d.ocr.text.trim()){
+        ocrBox.innerHTML=`<div class="verdict" style="margin-bottom:16px">
+          <h3>📖 Text extracted from image (OCR)</h3>
+          <div style="white-space:pre-wrap;color:var(--text);font-size:.9rem;line-height:1.5;max-height:180px;overflow:auto">${esc(d.ocr.text)}</div>
+        </div>`;
+      } else if(!d.ocr.ok){
+        ocrBox.innerHTML=`<div class="verdict" style="margin-bottom:16px">
+          <h3>📖 Text extraction (OCR)</h3>
+          <div class="hint" style="color:var(--warn)">${esc(d.ocr.error||"Could not read text.")}</div></div>`;
+      } else {
+        ocrBox.innerHTML=`<div class="verdict" style="margin-bottom:16px">
+          <h3>📖 Text extraction (OCR)</h3>
+          <div class="hint">No readable text found in the image.</div></div>`;
+      }
+    }
+
+    const v=$("#verdicts"); v.innerHTML="";
+    if(d.fake_news){ const f=d.fake_news; v.innerHTML+=verdictCard("📰 Fake news check",f.label,f.is_fake,f.confidence,f.fake_probability,"Fake probability",f.keywords); }
+    if(d.spam){ const s2=d.spam; v.innerHTML+=verdictCard("✉️ Spam check",s2.label,s2.is_spam,s2.confidence,s2.spam_probability,"Spam probability",s2.keywords); }
+    const sg=$("#signals"); const sig=d.signals||{};
+    const hasSignals = d.signals && (d.fake_news || d.spam);
+    document.querySelector(".signals").style.display = hasSignals ? "block":"none";
+    const items=[["CAPS words ratio",((sig.caps_ratio||0)*100).toFixed(0)+"%"],["Exclamation marks",sig.exclamations||0],["Money mentions",sig.money_mentions||0],["Links",sig.links||0],["Digit ratio",((sig.digit_ratio||0)*100).toFixed(0)+"%"],["Word count",sig.length_words||0]];
+    sg.innerHTML=items.map(([k,val])=>`<div class="sig"><b>${val}</b><small>${k}</small></div>`).join("");
+    $("#results").style.display="block";
+    $("#results").scrollIntoView({behavior:"smooth",block:"nearest"});
+  }
+</script>
+</body>
+</html>

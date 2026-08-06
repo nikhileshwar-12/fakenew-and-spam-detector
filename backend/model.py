@@ -21,7 +21,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, f1_score
 
-from data.datasets import build_fake_news_dataset, build_spam_dataset
+from datasets import build_fake_news_dataset, build_spam_dataset
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 MODEL_DIR = os.path.join(HERE, "models")

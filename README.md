@@ -1,5 +1,6 @@
 🛡️ TruthGuard — AI-Powered Fake News & Spam Detector
 TruthGuard is a machine-learning web application that classifies text as fake vs. real news and spam vs. legitimate (ham) messages. It accepts input five different ways — typed text, .txt upload, batch .csv, a URL, or an image/screenshot (via OCR) — and returns a verdict with a confidence score and the keywords that drove the decision.
+### 🔗 [Live Demo](https://truthguard-d1xv.onrender.com)
 
 Both models are trained on real-world datasets (~50,000 examples) and achieve ~99% accuracy.
 

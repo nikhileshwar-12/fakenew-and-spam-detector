@@ -86,8 +86,9 @@ POST	/api/analyze-file	Analyze an uploaded .txt file
 POST	/api/analyze-csv	Batch-classify a .csv, returns results file
 POST	/api/analyze-url	Fetch & analyze an article by URL
 POST	/api/analyze-image	OCR an image, then classify the text
-📸 Screenshots
-Add screenshots here — see the "Adding screenshots" note below.
+## 📸 Screenshots
+
+![TruthGuard Screenshot](backend/Screenshot.png)
 
 ⚠️ Disclaimer
 TruthGuard is an educational project. Predictions are probabilistic and should not be the sole basis for real-world decisions about the credibility of news or messages.

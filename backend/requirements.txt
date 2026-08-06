@@ -1,0 +1,10 @@
+flask
+scikit-learn
+pandas
+numpy
+joblib
+requests
+beautifulsoup4
+pytesseract
+pillow
+gunicorn

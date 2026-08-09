@@ -6,3 +6,4 @@ models/
 *.joblib
 realdata/
 *.csvhistory.db
+backend/history.db

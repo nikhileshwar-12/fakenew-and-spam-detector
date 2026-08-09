@@ -41,6 +41,7 @@
     width:100%;border-radius:12px;padding:13px 14px;background:#0d1430;
     border:1px solid var(--line);color:var(--text);font-size:1rem;outline:none
   }
+  /* tabs */
   .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
   .tabs button{
     background:#0d1430;border:1px solid var(--line);color:var(--muted);
@@ -62,6 +63,7 @@
   .samples{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
   .chip{background:#0d1430;border:1px solid var(--line);color:var(--muted);padding:7px 12px;border-radius:999px;font-size:.8rem;cursor:pointer}
   .chip:hover{border-color:var(--accent);color:var(--text)}
+  /* dropzone */
   .drop{
     border:2px dashed var(--line);border-radius:14px;padding:28px;text-align:center;
     background:#0d1430;cursor:pointer;transition:.15s
@@ -95,6 +97,15 @@
   .stats{display:flex;gap:18px;flex-wrap:wrap;margin-top:8px;color:var(--muted);font-size:.8rem}
   .stats b{color:var(--text)}
   .err{color:var(--danger);margin-top:12px;font-size:.9rem;display:none}
+  .vcard{border:1px solid var(--line);border-radius:14px;padding:18px;background:#0d1430;margin-top:16px}
+  .vcard h3{margin:0 0 10px;font-size:.8rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+  .vsummary li{margin:6px 0;font-size:.92rem;line-height:1.5}
+  .vitem{padding:10px 0;border-bottom:1px solid var(--line)}
+  .vitem:last-child{border-bottom:0}
+  .vitem a{color:var(--accent);text-decoration:none;font-weight:600;font-size:.92rem}
+  .vitem a:hover{text-decoration:underline}
+  .vmeta{color:var(--muted);font-size:.78rem;margin-top:2px}
+  .vrating{display:inline-block;padding:2px 8px;border-radius:6px;font-size:.75rem;font-weight:700;background:rgba(255,176,32,.15);color:var(--warn);border:1px solid rgba(255,176,32,.4);margin-left:6px}
   .spin{width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;display:inline-block;vertical-align:-3px;animation:sp .7s linear infinite}
   @keyframes sp{to{transform:rotate(360deg)}}
 </style>
@@ -121,17 +132,21 @@
     {% if metrics.get('spam') %}
     <span>✉️ Spam model accuracy: <b>{{ (metrics.spam.accuracy*100)|round(1) }}%</b></span>
     {% endif %}
+    <span><a href="/dashboard" style="color:#6c8cff;text-decoration:none;font-weight:600">📊 View Analytics Dashboard →</a></span>
   </div>
 
   <div class="card">
+    <!-- INPUT METHOD TABS -->
     <div class="tabs" id="tabs">
       <button data-t="text" class="active">✍️ Text</button>
       <button data-t="file">📄 Upload .txt</button>
       <button data-t="csv">📊 Batch CSV</button>
       <button data-t="url">🔗 URL</button>
       <button data-t="image">📷 Image</button>
+      <button data-t="verify">🌐 Live Verify</button>
     </div>
 
+    <!-- shared mode selector -->
     <div class="row" style="margin-top:0">
       <div class="modes" id="modes">
         <button data-m="auto" class="active">Auto (both)</button>
@@ -140,6 +155,7 @@
       </div>
     </div>
 
+    <!-- PANE: TEXT -->
     <div class="pane active" id="pane-text">
       <div class="row" style="margin-top:16px"></div>
       <label class="small" for="text">Paste a news headline/article or a message/email</label>
@@ -153,6 +169,7 @@
       <div class="row"><button class="btn" data-go="text">Analyze</button></div>
     </div>
 
+    <!-- PANE: FILE -->
     <div class="pane" id="pane-file">
       <div class="drop" id="drop-file">
         <b>Click to choose a .txt file</b>
@@ -163,6 +180,7 @@
       <div class="row"><button class="btn" data-go="file">Analyze file</button></div>
     </div>
 
+    <!-- PANE: CSV -->
     <div class="pane" id="pane-csv">
       <div class="drop" id="drop-csv">
         <b>Click to choose a .csv file</b>
@@ -175,6 +193,7 @@
       <div class="ok-box" id="csv-done"></div>
     </div>
 
+    <!-- PANE: URL -->
     <div class="pane" id="pane-url">
       <label class="small" for="url">Paste a news article link</label>
       <input type="url" id="url" placeholder="https://www.example.com/some-news-article">
@@ -182,6 +201,7 @@
       <div class="row"><button class="btn" data-go="url">Fetch &amp; analyze</button></div>
     </div>
 
+    <!-- PANE: IMAGE -->
     <div class="pane" id="pane-image">
       <div class="drop" id="drop-image">
         <b>Click to choose an image / screenshot</b>
@@ -191,16 +211,25 @@
       <input type="file" id="input-image" accept="image/*" hidden>
       <img id="img-preview" style="display:none;max-width:100%;max-height:260px;margin-top:12px;border-radius:12px;border:1px solid var(--line)">
       <label class="checkline" style="display:flex;align-items:center;gap:8px;margin-top:12px;color:var(--muted);font-size:.85rem;cursor:pointer">
-        <input type="checkbox" id="chk-ai" checked> Also estimate if the image is AI-generated (experimental)
+        <input type="checkbox" id="chk-ai"> Also try AI-generated image detection (off in this build)
       </label>
-      <div class="hint">📖 Reads text from screenshots of messages/articles, then checks it for fake news &amp; spam.<br>
-      🤖 <b>AI-image detection is experimental</b> — no detector is fully reliable, so treat the score as a hint, not proof.<br>
-      ⏳ The very first image may take a while (models download once).</div>
+      <div class="hint">📖 Reads text from screenshots of messages/articles (Tesseract OCR), then checks it for fake news &amp; spam.<br>
+      🤖 AI-image detection needs Tesseract installed — see setup notes. It works fully for reading text.</div>
       <div class="row"><button class="btn" data-go="image">Analyze image</button></div>
+    </div>
+
+    <!-- PANE: LIVE VERIFY -->
+    <div class="pane" id="pane-verify">
+      <label class="small" for="verify-text">Enter a news claim or headline to fact-check against real sources</label>
+      <textarea id="verify-text" style="min-height:90px" placeholder="e.g. NASA confirmed water was found on the Moon's surface"></textarea>
+      <div class="hint">🌐 Cross-checks your claim against: <b>your ML model</b> + <b>professional fact-checkers</b> (Google Fact Check) + <b>live news</b> (Google News). Fact-check &amp; NewsAPI use optional free API keys; Google News works with no key.</div>
+      <div class="row"><button class="btn" data-go="verify">Verify claim</button></div>
     </div>
 
     <div class="err" id="err"></div>
   </div>
+
+  <div id="verify-results" style="display:none"></div>
 
   <div id="results">
     <div class="srcline" id="srcline"></div>
@@ -214,7 +243,7 @@
   </div>
 
   <footer>
-    Built with scikit-learn · Five ways in: text, .txt, batch CSV, URL, or image.<br>
+    Built with scikit-learn · Four ways in: text, .txt upload, batch CSV, or a URL.<br>
     Educational tool — predictions are probabilistic and should not be the sole basis for real decisions.
   </footer>
 </div>
@@ -225,6 +254,7 @@
   let fileTxt = null, fileCsv = null, fileImg = null;
   const $ = s => document.querySelector(s);
 
+  // tabs
   document.querySelectorAll("#tabs button").forEach(b=>{
     b.onclick=()=>{
       document.querySelectorAll("#tabs button").forEach(x=>x.classList.remove("active"));
@@ -232,13 +262,18 @@
       document.querySelectorAll(".pane").forEach(p=>p.classList.remove("active"));
       $("#pane-"+activeTab).classList.add("active");
       $("#err").style.display="none";
+      $("#verify-results").style.display="none";
+      $("#results").style.display="none";
     };
   });
+  // mode
   document.querySelectorAll("#modes button").forEach(b=>{
     b.onclick=()=>{document.querySelectorAll("#modes button").forEach(x=>x.classList.remove("active"));b.classList.add("active");mode=b.dataset.m;};
   });
+  // sample chips
   document.querySelectorAll(".chip").forEach(c=>{ c.onclick=()=>{ $("#text").value=c.dataset.s; }; });
 
+  // file pickers + drag/drop
   function wireDrop(dropId, inputId, fnameId, setter){
     const drop=$("#"+dropId), input=$("#"+inputId), fname=$("#"+fnameId);
     drop.onclick=()=>input.click();
@@ -255,6 +290,7 @@
     prev.src=URL.createObjectURL(f); prev.style.display="block";
   });
 
+  // buttons
   document.querySelectorAll("[data-go]").forEach(b=>{
     b.onclick=()=>{
       const kind=b.dataset.go;
@@ -263,6 +299,7 @@
       if(kind==="csv")  go(b, analyzeCsv);
       if(kind==="url")  go(b, analyzeUrl);
       if(kind==="image")go(b, analyzeImage);
+      if(kind==="verify")go(b, verifyClaim);
     };
   });
   $("#text").addEventListener("keydown",e=>{ if((e.ctrlKey||e.metaKey)&&e.key==="Enter") $("[data-go=text]").click(); });
@@ -311,6 +348,7 @@
     box.style.display="block";
     $("#results").style.display="none";
   }
+
   async function analyzeImage(){
     if(!fileImg) throw new Error("Please choose an image first.");
     const fd=new FormData();
@@ -319,6 +357,75 @@
     const r=await fetch("/api/analyze-image",{method:"POST",body:fd});
     const d=await r.json(); if(!r.ok) throw new Error(d.error||"Failed");
     render(d);
+  }
+
+  async function verifyClaim(){
+    const text=$("#verify-text").value.trim();
+    if(!text) throw new Error("Please enter a claim or headline.");
+    $("#results").style.display="none";
+    const d = await postJSON("/api/verify",{text});
+    renderVerify(d);
+  }
+
+  function renderVerify(d){
+    const box=$("#verify-results");
+    let h = `<div class="vcard"><h3>🧭 Verdict summary</h3><ul class="vsummary">`;
+    (d.summary||[]).forEach(s=>{ h += `<li>${esc(s)}</li>`; });
+    h += `</ul></div>`;
+    if(d.ai){
+      if(d.ai.available && d.ai.text){
+        h += `<div class="vcard" style="border-color:var(--accent2)"><h3>🤖 AI reasoning <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">(Gemini)</span></h3><div style="white-space:pre-wrap;font-size:.92rem;line-height:1.55">${esc(d.ai.text)}</div></div>`;
+      } else if(d.ai.reason){
+        h += `<div class="vcard"><h3>🤖 AI reasoning</h3><div class="vmeta">${esc(d.ai.reason)} — add a free Gemini API key to enable plain-English explanations.</div></div>`;
+      }
+    }
+
+    // ML card
+    if(d.ml){
+      const p=d.ml.fake_probability;
+      h += `<div class="vcard"><h3>🤖 Our ML model</h3>
+        <div class="badge ${d.ml.is_fake?'bad':'good'}">${esc(d.ml.label)}</div>
+        ${bar(p)}<div class="conf">Fake probability: <b>${p}%</b></div></div>`;
+    }
+
+    // Fact-check card
+    const f=d.factcheck||{};
+    h += `<div class="vcard"><h3>✅ Professional fact-checkers</h3>`;
+    if(f.available && f.claims && f.claims.length){
+      f.claims.forEach(c=>{
+        h += `<div class="vitem">
+          ${c.url?`<a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.claim||'Fact-check')}</a>`:`<span>${esc(c.claim||'')}</span>`}
+          ${c.rating?`<span class="vrating">${esc(c.rating)}</span>`:''}
+          <div class="vmeta">${esc(c.publisher||'')}${c.claimant?' · claim by '+esc(c.claimant):''}</div>
+        </div>`;
+      });
+    } else if(f.available){
+      h += `<div class="vmeta">No professional fact-check found for this exact claim.</div>`;
+    } else {
+      h += `<div class="vmeta">${esc(f.reason||'Not available')} — add a free Google Fact Check API key to enable this.</div>`;
+    }
+    h += `</div>`;
+
+    // News card
+    const n=d.news||{};
+    h += `<div class="vcard"><h3>📰 Live news coverage <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">(via ${esc(n.source_used||'')})</span></h3>`;
+    const arts=(n.articles||[]).filter(a=>a.url);
+    if(arts.length){
+      arts.forEach(a=>{
+        h += `<div class="vitem">
+          <a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.title)}</a>
+          <div class="vmeta">${esc(a.source||'')}${a.published?' · '+esc(a.published):''}</div>
+          ${a.desc?`<div class="vmeta" style="color:var(--text);margin-top:3px">${esc(a.desc)}</div>`:''}
+        </div>`;
+      });
+    } else {
+      h += `<div class="vmeta">No related news coverage found.</div>`;
+    }
+    h += `</div>`;
+
+    box.innerHTML=h;
+    box.style.display="block";
+    box.scrollIntoView({behavior:"smooth",block:"nearest"});
   }
 
   function bar(p){ const col=p>=50?"linear-gradient(90deg,#ff8a5d,#ff5d6c)":"linear-gradient(90deg,#2fd07f,#37c8ff)"; return `<div class="meter"><span style="width:${p}%;background:${col}"></span></div>`; }
@@ -330,12 +437,14 @@
 
   function render(d){
     $("#csv-done").style.display="none";
+    $("#verify-results").style.display="none";
     const src=$("#srcline");
     let s = d.source ? esc(d.source) : "";
     if(d.extracted_title) s += (s?" · ":"")+"Title: "+esc(d.extracted_title);
     if(d.extracted_chars) s += ` · ${d.extracted_chars} chars analyzed`;
     src.textContent = s; src.style.display = s? "block":"none";
 
+    // --- AI-generated image box ---
     const aiBox=$("#ai-image-box"); aiBox.innerHTML="";
     if(d.ai_image){
       const a=d.ai_image;
@@ -357,6 +466,7 @@
       }
     }
 
+    // --- OCR extracted text box ---
     const ocrBox=$("#ocr-box"); ocrBox.innerHTML="";
     if(d.ocr){
       if(d.ocr.ok && d.ocr.text && d.ocr.text.trim()){
@@ -387,5 +497,5 @@
     $("#results").scrollIntoView({behavior:"smooth",block:"nearest"});
   }
 </script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a27db62eabdecd03',t:'MTc4NjE4MzYyMA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>

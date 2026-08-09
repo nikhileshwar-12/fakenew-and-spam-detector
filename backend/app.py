@@ -1,5 +1,6 @@
 """
 TruthGuard - Flask web app. Input: text, .txt, .csv, URL, or image.
+Plus: language detection, source credibility, and history/analytics.
 """
 import io
 import csv
@@ -9,10 +10,36 @@ import model
 
 app = Flask(__name__)
 
+
+# Allow the browser extension (and any origin) to call the API.
+@app.after_request
+def add_cors_headers(resp):
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    resp.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    resp.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    return resp
+
+
 print("[TruthGuard] Preparing models...")
 METRICS = model.train_and_save(force=False)
 if not METRICS:
     METRICS = model.train_and_save(force=True)
+
+# New feature modules (all optional - app still runs if any are missing)
+try:
+    import history
+    history.init_db()
+except Exception:
+    history = None
+try:
+    import language
+except Exception:
+    language = None
+try:
+    import source_credibility
+except Exception:
+    source_credibility = None
+
 print("[TruthGuard] Ready.")
 
 MAX_TEXT = 20000
@@ -21,6 +48,11 @@ MAX_TEXT = 20000
 @app.route("/")
 def index():
     return render_template("index.html", metrics=METRICS)
+
+
+@app.route("/dashboard")
+def dashboard():
+    return render_template("dashboard.html")
 
 
 @app.route("/api/analyze", methods=["POST"])
@@ -32,7 +64,12 @@ def api_analyze():
         return jsonify({"error": "Please enter some text to analyze."}), 400
     text = text[:MAX_TEXT]
     try:
-        return jsonify(model.analyze(text, mode=mode))
+        result = model.analyze(text, mode=mode)
+        if language:
+            result["language"] = language.detect(text)
+        if history:
+            history.record(text, result, mode=mode)
+        return jsonify(result)
     except Exception as e:
         return jsonify({"error": f"Analysis failed: {e}"}), 500
 
@@ -51,6 +88,10 @@ def api_analyze_file():
         return jsonify({"error": "The file appears to be empty."}), 400
     result = model.analyze(text[:MAX_TEXT], mode=mode)
     result["source"] = f"File: {f.filename}"
+    if language:
+        result["language"] = language.detect(text)
+    if history:
+        history.record(text, result, mode=mode)
     return jsonify(result)
 
 
@@ -157,6 +198,12 @@ def api_analyze_url():
     result["source"] = f"URL: {url}"
     result["extracted_title"] = title[:200]
     result["extracted_chars"] = len(text)
+    if source_credibility:
+        result["source_credibility"] = source_credibility.rate_source(url)
+    if language:
+        result["language"] = language.detect(text)
+    if history:
+        history.record(text, result, mode=mode)
     return jsonify(result)
 
 
@@ -172,30 +219,78 @@ def api_analyze_image():
     except Exception as e:
         return jsonify({"error": f"Could not read image: {e}"}), 400
 
-    import image_analysis
-    out = {"source": f"Image: {f.filename}"}
+    try:
+        import image_analysis
+    except Exception as e:
+        return jsonify({"error": f"Image module not found: {e}"}), 500
 
-    ocr = image_analysis.extract_text(img_bytes)
-    out["ocr"] = {"ok": ocr["ok"], "error": ocr["error"], "text": ocr["text"][:MAX_TEXT]}
-    if ocr["ok"] and ocr["text"].strip():
-        text_result = model.analyze(ocr["text"][:MAX_TEXT], mode=mode)
-        out["fake_news"] = text_result.get("fake_news")
-        out["spam"] = text_result.get("spam")
-        out["signals"] = text_result.get("signals")
+    out = {"source": f"Image: {f.filename}"}
+    try:
+        ocr = image_analysis.extract_text(img_bytes)
+        out["ocr"] = {"ok": ocr["ok"], "error": ocr["error"], "text": ocr["text"][:MAX_TEXT]}
+        if ocr["ok"] and ocr["text"].strip():
+            text_result = model.analyze(ocr["text"][:MAX_TEXT], mode=mode)
+            out["fake_news"] = text_result.get("fake_news")
+            out["spam"] = text_result.get("spam")
+            out["signals"] = text_result.get("signals")
+            if history:
+                history.record(ocr["text"], text_result, mode=mode)
+    except Exception as e:
+        out["ocr"] = {"ok": False, "error": f"OCR crashed: {e}", "text": ""}
 
     if do_ai:
-        out["ai_image"] = image_analysis.detect_ai_image(img_bytes)
-
+        try:
+            out["ai_image"] = image_analysis.detect_ai_image(img_bytes)
+        except Exception as e:
+            out["ai_image"] = {"ok": False, "error": f"AI detection crashed: {e}",
+                               "label": None, "ai_probability": None, "raw": None}
     return jsonify(out)
+
+
+@app.route("/api/verify", methods=["POST"])
+def api_verify():
+    data = request.get_json(silent=True) or {}
+    text = (data.get("text") or "").strip()
+    if not text:
+        return jsonify({"error": "Please enter a claim or headline to verify."}), 400
+    text = text[:MAX_TEXT]
+    try:
+        import live_verify
+        ml = model.analyze(text, mode="fake_news").get("fake_news")
+        report = live_verify.verify(text, ml_result=ml)
+        if history:
+            history.record(text, {"fake_news": ml}, mode="verify")
+        return jsonify(report)
+    except Exception as e:
+        return jsonify({"error": f"Verification failed: {e}"}), 500
+
+
+@app.route("/api/stats")
+def api_stats():
+    if not history:
+        return jsonify({"error": "History not available."}), 500
+    return jsonify(history.stats())
+
+
+@app.route("/api/source-credibility", methods=["POST"])
+def api_source_credibility():
+    if not source_credibility:
+        return jsonify({"error": "Source credibility not available."}), 500
+    data = request.get_json(silent=True) or {}
+    url = (data.get("url") or "").strip()
+    if not url:
+        return jsonify({"error": "Please enter a URL or domain."}), 400
+    return jsonify(source_credibility.rate_source(url))
 
 
 @app.route("/api/capabilities")
 def api_capabilities():
     try:
         import image_analysis
-        return jsonify(image_analysis.status())
+        caps = image_analysis.status()
     except Exception:
-        return jsonify({"ocr": False, "ai_detector": False})
+        caps = {"ocr": False, "ai_detector": False}
+    return jsonify(caps)
 
 
 @app.route("/api/metrics")

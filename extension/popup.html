@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  body { width: 300px; margin: 0; font-family: system-ui, Segoe UI, Roboto, Arial, sans-serif; background: #0b1020; color: #e8edff; }
+  .head { background: linear-gradient(135deg,#6c8cff,#8b5cf6); padding: 14px; font-weight: 700; font-size: 15px; }
+  .body { padding: 14px; }
+  label { font-size: 12px; color: #9aa6d0; display: block; margin-bottom: 6px; }
+  input { width: 100%; box-sizing: border-box; padding: 9px; border-radius: 8px; border: 1px solid #2a3457; background: #0d1430; color: #e8edff; font-size: 13px; }
+  button { width: 100%; margin-top: 10px; padding: 10px; border: 0; border-radius: 8px; background: linear-gradient(135deg,#6c8cff,#8b5cf6); color: #fff; font-weight: 700; font-size: 13px; cursor: pointer; }
+  .status { font-size: 12px; margin-top: 8px; }
+  .ok { color: #2fd07f; } .bad { color: #ff5d6c; }
+  .how { font-size: 11px; color: #9aa6d0; margin-top: 12px; border-top: 1px solid #2a3457; padding-top: 10px; line-height: 1.5; }
+</style>
+</head>
+<body>
+  <div class="head">🛡️ TruthGuard</div>
+  <div class="body">
+    <label for="url">TruthGuard server URL</label>
+    <input id="url" type="text" placeholder="http://127.0.0.1:5000">
+    <button id="save">Save</button>
+    <button id="test" style="background:#1b2340;border:1px solid #2a3457">Test connection</button>
+    <div class="status" id="status"></div>
+    <div class="how"><b>How to use:</b> select text on any webpage (news, Instagram, X, WhatsApp Web),
+      right-click, choose <b>"🛡️ Check with TruthGuard"</b>.<br><br>
+      Use <b>http://127.0.0.1:5000</b> locally, or your live URL to use it anywhere.</div>
+  </div>
+<script src="popup.js"></script>
+</body>
+</html>

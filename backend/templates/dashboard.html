@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TruthGuard — Analytics Dashboard</title>
+<style>
+  :root{--bg:#0b1020;--panel:#141b34;--panel2:#1b2340;--line:#2a3457;--text:#e8edff;--muted:#9aa6d0;--accent:#6c8cff;--accent2:#8b5cf6;--danger:#ff5d6c;--ok:#2fd07f;--warn:#ffb020}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:radial-gradient(1200px 700px at 80% -10%,#1c2547 0%,var(--bg) 55%);color:var(--text);min-height:100vh}
+  .wrap{max-width:1000px;margin:0 auto;padding:28px 20px 64px}
+  header{display:flex;align-items:center;gap:14px;margin-bottom:6px}
+  .logo{width:46px;height:46px;border-radius:12px;flex:none;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;box-shadow:0 8px 24px rgba(108,140,255,.35)}
+  h1{font-size:1.5rem;margin:0}
+  .tag{color:var(--muted);font-size:.9rem;margin:2px 0 0}
+  a.back{color:var(--accent);text-decoration:none;font-size:.9rem}
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:20px}
+  @media(max-width:720px){.cards{grid-template-columns:repeat(2,1fr)}}
+  .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 12px 40px rgba(0,0,0,.3)}
+  .card .big{font-size:2rem;font-weight:800}
+  .card .lbl{color:var(--muted);font-size:.8rem;margin-top:4px}
+  .section{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:16px;padding:20px;margin-top:20px}
+  .section h2{font-size:1rem;margin:0 0 14px}
+  .bar-row{display:flex;align-items:center;gap:10px;margin:8px 0}
+  .bar-row .name{width:120px;font-size:.85rem;color:var(--muted)}
+  .bar{flex:1;height:14px;border-radius:999px;background:#0d1430;overflow:hidden}
+  .bar>span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+  .bar-row .val{width:36px;text-align:right;font-size:.8rem;color:var(--muted)}
+  table{width:100%;border-collapse:collapse;font-size:.85rem}
+  th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.5px}
+  .pill{padding:2px 8px;border-radius:6px;font-size:.72rem;font-weight:700}
+  .pill.bad{background:rgba(255,93,108,.15);color:var(--danger)}
+  .pill.good{background:rgba(47,208,127,.15);color:var(--ok)}
+  .kw{display:flex;gap:8px;flex-wrap:wrap}
+  .kw span{background:#0d1430;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:.8rem}
+  .kw b{color:var(--accent)}
+  .empty{color:var(--muted);text-align:center;padding:30px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
+    </div>
+    <div>
+      <h1>Analytics Dashboard</h1>
+      <p class="tag">Live statistics from every check · <a class="back" href="/">← Back to TruthGuard</a></p>
+    </div>
+  </header>
+  <div id="content"><div class="empty">Loading…</div></div>
+</div>
+<script>
+  const $ = s => document.querySelector(s);
+  function esc(s){return (s+"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+  async function load(){
+    try{
+      const r = await fetch("/api/stats");
+      const d = await r.json();
+      if(!r.ok) throw new Error(d.error||"Failed");
+      render(d);
+    }catch(e){ $("#content").innerHTML = `<div class="empty">Could not load stats: ${esc(e.message)}</div>`; }
+  }
+  function render(d){
+    if(!d.total){
+      $("#content").innerHTML = `<div class="section"><div class="empty">No checks recorded yet.<br>Analyze some text on the main page, then come back!</div></div>`;
+      return;
+    }
+    let h = `<div class="cards">
+      <div class="card"><div class="big">${d.total}</div><div class="lbl">Total checks</div></div>
+      <div class="card"><div class="big" style="color:var(--danger)">${d.fake_count}</div><div class="lbl">Flagged fake (${d.fake_pct}%)</div></div>
+      <div class="card"><div class="big" style="color:var(--warn)">${d.spam_count}</div><div class="lbl">Flagged spam (${d.spam_pct}%)</div></div>
+      <div class="card"><div class="big" style="color:var(--ok)">${d.total - Math.max(d.fake_count,d.spam_count)}</div><div class="lbl">Clean (approx.)</div></div>
+    </div>`;
+    h += `<div class="section"><h2>📊 Detection rates</h2>
+      <div class="bar-row"><span class="name">Fake news</span><div class="bar"><span style="width:${d.fake_pct}%"></span></div><span class="val">${d.fake_pct}%</span></div>
+      <div class="bar-row"><span class="name">Spam</span><div class="bar"><span style="width:${d.spam_pct}%"></span></div><span class="val">${d.spam_pct}%</span></div>
+    </div>`;
+    if(d.top_keywords && d.top_keywords.length){
+      h += `<div class="section"><h2>🔑 Most common flagged keywords</h2><div class="kw">`;
+      d.top_keywords.forEach(([k,n])=>{ h += `<span>${esc(k)} <b>×${n}</b></span>`; });
+      h += `</div></div>`;
+    }
+    h += `<div class="section"><h2>🕒 Recent checks</h2><table><thead><tr><th>Time</th><th>Text</th><th>Fake</th><th>Spam</th></tr></thead><tbody>`;
+    d.recent.forEach(r=>{
+      const fake = r.is_fake===1 ? `<span class="pill bad">FAKE ${r.fake_prob??''}%</span>` : (r.is_fake===0?`<span class="pill good">OK</span>`:'—');
+      const spam = r.is_spam===1 ? `<span class="pill bad">SPAM ${r.spam_prob??''}%</span>` : (r.is_spam===0?`<span class="pill good">OK</span>`:'—');
+      const t = (r.ts||'').replace('T',' ').slice(5,16);
+      h += `<tr><td>${esc(t)}</td><td>${esc((r.text_preview||'').slice(0,60))}</td><td>${fake}</td><td>${spam}</td></tr>`;
+    });
+    h += `</tbody></table></div>`;
+    $("#content").innerHTML = h;
+  }
+  load();
+  setInterval(load, 5000);
+</script>
+</body>
+</html>

@@ -2,6 +2,8 @@
 
 ### 🔗 [Live Demo](https://truthguard-d1xv.onrender.com) · [GitHub](https://github.com/nikhileshwar-12/fakenew-and-spam-detector)
 
+![TruthGuard Screenshot](backend/demo.png)
+
 TruthGuard is a full-stack machine-learning web application that classifies text as **fake vs. real news** and **spam vs. legitimate (ham)** messages. It goes beyond a simple classifier — it **cross-checks claims against live news and professional fact-checkers**, explains its reasoning with **AI (Google Gemini)**, reads text from **images (OCR)**, and even ships with a **browser extension** to verify text on any website.
 
 Both ML models are trained on **~50,000 real-world examples** and achieve **~99% accuracy**.
@@ -74,7 +76,7 @@ Highlight text on **any website** (news sites, social media, messaging apps), ri
 - [Tesseract OCR](https://github.com/UB-Mannheim/tesseract/wiki) (for the image feature)
 
 ### Installation
-\`\`\`bash
+```bash
 git clone https://github.com/nikhileshwar-12/fakenew-and-spam-detector.git
 cd "fakenew-and-spam-detector/backend"
 
@@ -84,16 +86,16 @@ python -m venv .venv
 
 pip install -r requirements.txt
 python app.py
-\`\`\`
+```
 Open **http://localhost:5000**.
 
 ### Optional API keys (for Live Verify's full power)
 Set as environment variables — never hard-coded:
-\`\`\`bash
+```bash
 setx GEMINI_API_KEY "your_key"            # AI reasoning (aistudio.google.com)
 setx NEWSAPI_KEY "your_key"               # richer news (newsapi.org)
 setx GOOGLE_FACTCHECK_API_KEY "your_key"  # fact-checker ratings (Google Cloud)
-\`\`\`
+```
 > The app works without keys too — Live Verify falls back to free Google News, and all other features run offline.
 
 ### Browser extension
@@ -103,7 +105,7 @@ setx GOOGLE_FACTCHECK_API_KEY "your_key"  # fact-checker ratings (Google Cloud)
 ---
 
 ## 📁 Project Structure
-\`\`\`
+```
 fakenew-and-spam-detector/
 ├── backend/
 │   ├── app.py                # Flask server + REST API
@@ -112,4 +114,34 @@ fakenew-and-spam-detector/
 │   ├── train_from_csv.py     # train on real Kaggle datasets
 │   ├── image_analysis.py     # Tesseract OCR
 │   ├── live_verify.py        # fact-check + news + Gemini reasoning
-│   ├── 
+│   ├── source_credibility.py # domain credibility ratings
+│   ├── language.py           # language detection
+│   ├── history.py            # SQLite storage + analytics
+│   └── templates/            # index.html, dashboard.html
+└── extension/                # Chrome/Edge browser extension
+```
+
+---
+
+## 🔌 API Endpoints
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/analyze` | Analyze raw text |
+| `POST` | `/api/analyze-file` | Analyze a `.txt` file |
+| `POST` | `/api/analyze-csv` | Batch-classify a CSV |
+| `POST` | `/api/analyze-url` | Analyze an article by URL |
+| `POST` | `/api/analyze-image` | OCR an image, then classify |
+| `POST` | `/api/verify` | Live Verify (ML + news + fact-check + AI) |
+| `POST` | `/api/source-credibility` | Rate a domain |
+| `GET`  | `/api/stats` | Dashboard analytics |
+| `GET`  | `/dashboard` | Analytics dashboard page |
+
+---
+
+## ⚠️ Disclaimer
+TruthGuard is an **educational project**. Predictions are probabilistic and should not be the sole basis for real-world decisions about the credibility of news or messages. AI-image detection (where present) is experimental and not definitive.
+
+---
+
+## 👤 Author
+**Dappili Nikhileshwar Reddy** — [GitHub](https://github.com/nikhileshwar-12)
